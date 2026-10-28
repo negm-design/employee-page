@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تسجيل بيانات موظف خارج كفالة</title>
+<meta property="og:title" content="تسجيل بيانات موظف خارج كفالة">
+<meta property="og:description" content="اكتب رقم الهوية وارفق صورة الهوية وصورة الـ ID">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Tahoma, 'Segoe UI', Arial, sans-serif; background: #f2f5f9; color: #1d2733; }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+  .card { background: #fff; border-radius: 14px; padding: 22px 18px; box-shadow: 0 2px 12px rgba(20,40,80,.08); }
+  h1 { font-size: 21px; margin: 0 0 6px; text-align: center; }
+  .sub { text-align: center; color: #66758a; font-size: 14px; margin: 0 0 20px; }
+  label { display: block; font-weight: bold; font-size: 15px; margin: 16px 0 6px; }
+  .req { color: #d93025; }
+  input[type=text], input[type=tel] { width: 100%; font-size: 17px; padding: 11px 12px; border: 1.5px solid #cfd8e3; border-radius: 10px; outline: none; font-family: inherit; }
+  input:focus { border-color: #1a73e8; }
+  #idNum { letter-spacing: 3px; direction: ltr; text-align: center; font-size: 20px; }
+  .hint { font-size: 13px; margin-top: 5px; color: #66758a; min-height: 18px; }
+  .hint.bad { color: #d93025; } .hint.good { color: #188038; }
+  .pick { display: flex; align-items: center; gap: 12px; border: 1.5px dashed #b8c4d3; border-radius: 10px; padding: 10px; cursor: pointer; background: #fafcff; }
+  .pick img { width: 112px; height: 72px; object-fit: contain; border-radius: 6px; background: #e8edf3; display: none; }
+  .pick.tall img { width: 72px; height: 112px; }
+  .pick.has img { display: block; }
+  .pick.has { border-style: solid; border-color: #188038; }
+  .pick span { font-size: 15px; color: #1a73e8; }
+  .pick input { display: none; }
+  .rot { display: none; width: auto; margin: 6px 0 0; padding: 6px 12px; font-size: 14px; background: #5f6b7a; }
+  .rot.show { display: inline-block; }
+  button { width: 100%; margin-top: 24px; font-size: 18px; font-weight: bold; padding: 13px; border: 0; border-radius: 10px; background: #1a73e8; color: #fff; cursor: pointer; font-family: inherit; }
+  button:disabled { background: #a8b8cc; cursor: not-allowed; }
+  .msg { margin-top: 14px; padding: 12px; border-radius: 10px; font-size: 15px; display: none; }
+  .msg.err { display: block; background: #fce8e6; color: #b3261e; }
+  .done { text-align: center; padding: 30px 10px; }
+  .done .ok { font-size: 54px; color: #188038; }
+  .center { text-align: center; color: #66758a; padding: 30px 0; }
+  .foot { text-align: center; margin-top: 18px; }
+  .adminBtn { display: none; font-size: 12px; color: #9aa6b4; text-decoration: none; }
+
+  /* كاميرا الـ ID بإطار */
+  .noId { display: flex; align-items: center; gap: 8px; font-weight: normal; font-size: 15px; margin: 10px 0 0; cursor: pointer; }
+  .noId input { width: 20px; height: 20px; margin: 0; }
+  .pick.off { display: none; }
+  .cam { position: fixed; inset: 0; z-index: 100; background: #000; display: none; flex-direction: column; }
+  .cam.on { display: flex; }
+  .stage { position: relative; flex: 1; overflow: hidden; touch-action: none; }
+  .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .stage img { position: absolute; max-width: none; user-select: none; -webkit-user-drag: none; }
+  .frame { position: absolute; border: 3px solid #fff; border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(95,95,95,.82); pointer-events: none; }
+  .camTip { color: #fff; text-align: center; font-size: 15px; padding: 10px 16px 0; background: #111; }
+  .camBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 22px; background: #111; }
+  .camBar button { margin: 0; width: auto; flex: 1; font-size: 16px; padding: 12px; }
+  .camBar .ghost { background: #3c4043; }
+  .camBar .shot { flex: 0 0 68px; height: 68px; border-radius: 50%; background: #fff; border: 5px solid #9aa0a6; padding: 0; }
+  .cam input[type=range] { display: block; width: calc(100% - 32px); margin: 0 16px; background: #111; }
+  .cam [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <div class="center" id="loading">جاري التحميل…</div>
+
+    <form id="form" style="display:none" autocomplete="off">
+      <h1>تسجيل بيانات موظف خارج كفالة</h1>
+      <p class="sub">اكتب رقم الهوية وارفق الصور ثم اضغط إرسال</p>
+
+      <label for="idNum">رقم الهوية / الإقامة <span class="req">*</span></label>
+      <input type="tel" id="idNum" inputmode="numeric" maxlength="10" placeholder="2xxxxxxxxx">
+      <div class="hint" id="idHint">يبدأ برقم 2 ويتكوّن من 10 أرقام</div>
+
+      <label>صورة الهوية من أبشر <span class="req">*</span></label>
+      <label class="pick" id="idPick">
+        <img alt="">
+        <span>اختر صورة الهوية من الاستوديو</span>
+        <input type="file" id="idPhoto" accept="image/jpeg,image/png,image/webp">
+      </label>
+
+      <button type="button" class="rot" id="idPhotoRot">⟳ تدوير الصورة</button>
+
+      <label>صورة الـ ID <span class="req">*</span></label>
+      <div class="pick tall" id="photoPick" role="button">
+        <img alt="">
+        <span>صوّر الـ ID بالكاميرا</span>
+      </div>
+      <input type="file" id="photo" accept="image/*" capture="environment" hidden>
+      <label class="noId"><input type="checkbox" id="noId"> لا يوجد ID</label>
+
+      <button type="submit" id="send" disabled>إرسال</button>
+      <div class="msg" id="msg"></div>
+    </form>
+
+    <div class="done" id="done" style="display:none">
+      <div class="ok">✔</div>
+      <h1>تم إرسال بياناتك بنجاح</h1>
+      <p class="sub">شكرًا لك</p>
+    </div>
+  </div>
+  <div class="foot"><a class="adminBtn" id="adminBtn" target="_top">⚙ الأدمن</a></div>
+</div>
+
+<div class="cam" id="cam">
+  <div class="stage" id="stage">
+    <video id="vid" playsinline muted autoplay></video>
+    <img id="cropImg" alt="" hidden>
+    <div class="frame" id="frame"></div>
+  </div>
+  <div class="camTip" id="camTip">خلّي الـ ID جوه الإطار</div>
+  <input type="range" dir="ltr" id="zoom" min="1" max="4" step="0.01" value="1" hidden>
+  <div class="camBar">
+    <button type="button" class="ghost" id="camCancel">إلغاء</button>
+    <button type="button" class="shot" id="camShot" aria-label="تصوير"></button>
+    <button type="button" id="camAlt" hidden>افتح الكاميرا</button>
+    <button type="button" class="ghost" id="camRot" hidden>⟳ تدوير</button>
+    <button type="button" id="camOk" hidden>تم</button>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  // رابط الـ Web App (اللي آخره /exec). بيتملا بس في نسخة GitHub Pages؛ جوه Apps Script بيفضل فاضي
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwS5UhOA0EDhpFEZCGoKdHWQkqF8xoQ21ZFfMYnJHGXySu2RVajmpG2gYJwMCTVMbBD/exec';
+
+  // نداء للسيرفر: جوه Apps Script بـ google.script.run، وعلى GitHub Pages بـ fetch
+  function call(fn, arg) {
+    if (window.google && google.script && google.script.run) {
+      return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](arg));
+    }
+    const req = fn === 'getFormState'
+      ? fetch(API_URL + '?api=state')
+      : fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'submit', data: arg }) });
+    return req.then(r => r.json()).then(r => { if (r && r.error) throw new Error(r.error); return r; });
+  }
+  const images = { idPhoto: null, photo: null };
+  const ID_RE = /^2\d{9}$/;
+
+  function fromCanvas(c) {
+    const dataUrl = c.toDataURL('image/jpeg', 0.85);
+    return { mime: 'image/jpeg', data: dataUrl.split(',')[1], preview: dataUrl, canvas: c };
+  }
+
+  function rotate(c) {
+    const r = document.createElement('canvas');
+    r.width = c.height; r.height = c.width;
+    const g = r.getContext('2d');
+    g.translate(r.width, 0); g.rotate(Math.PI / 2); g.drawImage(c, 0, 0);
+    return r;
+  }
+
+  // تصغير الصورة قبل الرفع (أسرع وأخف) — لو المتصفح ماقدرش يقرأها نرفعها زي ما هي
+  // want: 'wide' للهوية (بالعرض) أو 'tall' للـ ID (بالطول) — لو الصورة جاية عكس كده تتلف تلقائي
+  function prepImage(file, want) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const max = 1400, s = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        const wide = c.width >= c.height;
+        resolve(fromCanvas((want === 'tall') === wide ? rotate(c) : c));
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        if (file.size > 10 * 1024 * 1024) return reject(new Error('الصورة كبيرة جدًا، اختر صورة أصغر.'));
+        const r = new FileReader();
+        r.onload = () => resolve({ mime: file.type || 'image/jpeg', data: String(r.result).split(',')[1], preview: '' });
+        r.onerror = () => reject(new Error('تعذّر قراءة الصورة.'));
+        r.readAsDataURL(file);
+      };
+      img.src = url;
+    });
+  }
+
+  function showImage(inputId, pickId, im) {
+    images[inputId] = im;
+    $(pickId).querySelector('img').src = im.preview || '';
+    if ($(inputId + 'Rot')) $(inputId + 'Rot').classList.toggle('show', !!im.canvas);
+  }
+
+  function bindPicker(inputId, pickId, want) {
+    $(inputId + 'Rot').addEventListener('click', () => {
+      const im = images[inputId];
+      if (im && im.canvas) showImage(inputId, pickId, fromCanvas(rotate(im.canvas)));
+    });
+    $(inputId).addEventListener('change', async e => {
+      const f = e.target.files[0];
+      const box = $(pickId);
+      images[inputId] = null; box.classList.remove('has'); if ($(inputId + 'Rot')) $(inputId + 'Rot').classList.remove('show');
+      if (f) {
+        try {
+          if (f.type && !/^image\//.test(f.type)) throw new Error('الملف لازم يكون صورة.');
+          showImage(inputId, pickId, await prepImage(f, want));
+          box.classList.add('has');
+          box.querySelector('span').textContent = 'تم اختيار الصورة (اضغط للتغيير)';
+        } catch (err) { showErr(err.message); }
+      }
+      refresh();
+    });
+  }
+
+  function refresh() {
+    const v = $('idNum').value, h = $('idHint');
+    if (!v) { h.className = 'hint'; h.textContent = 'يبدأ برقم 2 ويتكوّن من 10 أرقام'; }
+    else if (v[0] !== '2') { h.className = 'hint bad'; h.textContent = 'رقم الهوية لازم يبدأ برقم 2'; }
+    else if (v.length < 10) { h.className = 'hint bad'; h.textContent = 'باقي ' + (10 - v.length) + ' أرقام'; }
+    else { h.className = 'hint good'; h.textContent = '✔ رقم الهوية صحيح'; }
+    $('send').disabled = !(ID_RE.test(v) && images.idPhoto && ($('noId').checked || images.photo));
+  }
+
+  function showErr(t) { const m = $('msg'); m.className = 'msg err'; m.textContent = t; }
+
+  // أرقام فقط (ويحوّل الأرقام العربية ٠-٩ لإنجليزي)
+  function digitsOnly(el) {
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g, '');
+      refresh();
+    });
+  }
+
+  digitsOnly($('idNum'));
+  bindPicker('idPhoto', 'idPick', 'wide');
+
+  /* ---------- كاميرا الـ ID: إطار بالطول والباقي رمادي، والصورة بتتقص على الإطار ---------- */
+  const CARD = 54 / 86;            // عرض ÷ طول كارت الـ ID وهو واقف
+  let stream = null, crop = null;
+
+  function frameRect() {
+    const st = $('stage'), sw = st.clientWidth, sh = st.clientHeight;
+    const h = Math.min(sh * 0.82, (sw * 0.86) / CARD), w = h * CARD;
+    return { x: (sw - w) / 2, y: (sh - h) / 2, w, h, sw, sh };
+  }
+  function placeFrame() {
+    const f = frameRect();
+    Object.assign($('frame').style, { left: f.x + 'px', top: f.y + 'px', width: f.w + 'px', height: f.h + 'px' });
+    return f;
+  }
+  function camMode(mode, tip) {
+    $('cam').classList.add('on');
+    $('vid').hidden = mode !== 'live';
+    $('camShot').hidden = mode !== 'live';
+    $('camAlt').hidden = mode !== 'alt';
+    $('cropImg').hidden = $('camRot').hidden = $('camOk').hidden = $('zoom').hidden = mode !== 'crop';
+    $('camTip').textContent = tip;
+    placeFrame();
+  }
+  function stopStream() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    $('vid').srcObject = null;
+  }
+  function closeCam() {
+    stopStream(); crop = null;
+    $('cam').classList.remove('on');
+  }
+
+  async function openCam() {
+    $('msg').className = 'msg';
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return $('photo').click();
+    camMode('live', 'خلّي الـ ID جوه الإطار واضغط الزرار');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false
+      });
+      $('vid').srcObject = stream;
+      await $('vid').play();
+    } catch (e) {
+      stopStream();
+      // المتصفح مارضيش يفتح الكاميرا جوه الصفحة: نفتح كاميرا الموبايل وبعدها نظبط الصورة على الإطار
+      camMode('alt', 'اضغط «افتح الكاميرا» وصوّر الـ ID، وبعدها هتظبطه جوه الإطار');
+    }
+  }
+
+  // يقص الجزء اللي جوه الإطار من الصورة ويحفظه
+  function finishCrop(src, sx, sy, sw, sh) {
+    const H = Math.min(1400, Math.max(400, Math.round(sh))), W = Math.round(H * CARD);
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+    g.drawImage(src, sx, sy, sw, sh, 0, 0, W, H);
+    closeCam();
+    showImage('photo', 'photoPick', fromCanvas(c));
+    $('photoPick').classList.add('has');
+    $('photoPick').querySelector('span').textContent = 'تم التصوير (اضغط لإعادة التصوير)';
+    refresh();
+  }
+
+  function shoot() {
+    const v = $('vid'), f = frameRect(), vw = v.videoWidth, vh = v.videoHeight;
+    if (!vw) return;
+    const s = Math.max(f.sw / vw, f.sh / vh), ox = (f.sw - vw * s) / 2, oy = (f.sh - vh * s) / 2;
+    finishCrop(v, (f.x - ox) / s, (f.y - oy) / s, f.w / s, f.h / s);
+  }
+
+  // وضع الظبط: الصورة بتتحرك بالصباع وتتكبّر، والإطار ثابت
+  function layoutCrop() {
+    if (!crop) return;
+    const f = placeFrame(), c = crop;
+    c.base = Math.max(f.w / c.iw, f.h / c.ih);
+    const s = c.base * c.z, w = c.iw * s, h = c.ih * s;
+    c.tx = Math.max(-(w - f.w) / 2, Math.min((w - f.w) / 2, c.tx));
+    c.ty = Math.max(-(h - f.h) / 2, Math.min((h - f.h) / 2, c.ty));
+    c.left = f.x + f.w / 2 - w / 2 + c.tx; c.top = f.y + f.h / 2 - h / 2 + c.ty; c.s = s;
+    Object.assign($('cropImg').style, { left: c.left + 'px', top: c.top + 'px', width: w + 'px', height: h + 'px' });
+  }
+  function setCropSource(canvas) {
+    crop = { src: canvas, iw: canvas.width, ih: canvas.height, z: 1, tx: 0, ty: 0 };
+    $('zoom').value = 1;
+    $('cropImg').src = canvas.toDataURL('image/jpeg', 0.9);
+    layoutCrop();
+  }
+  function openCrop(file) {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 2400 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      camMode('crop', 'حرّك الصورة وكبّرها لحد ما الـ ID يملا الإطار');
+      setCropSource(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); closeCam(); showErr('تعذّر قراءة الصورة، صوّر تاني.'); };
+    img.src = url;
+  }
+
+  const ptrs = new Map(); let pinch = null;
+  $('stage').addEventListener('pointerdown', e => {
+    if (!crop) return;
+    $('stage').setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: crop.z };
+    }
+  });
+  $('stage').addEventListener('pointermove', e => {
+    if (!crop || !ptrs.has(e.pointerId)) return;
+    const prev = ptrs.get(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 2 && pinch) {
+      const [a, b] = [...ptrs.values()];
+      crop.z = Math.max(1, Math.min(4, pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d));
+      $('zoom').value = crop.z;
+    } else if (ptrs.size === 1) {
+      crop.tx += e.clientX - prev.x; crop.ty += e.clientY - prev.y;
+    }
+    layoutCrop();
+  });
+  const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
+  $('stage').addEventListener('pointerup', endPtr);
+  $('stage').addEventListener('pointercancel', endPtr);
+  $('zoom').addEventListener('input', () => { if (crop) { crop.z = +$('zoom').value; layoutCrop(); } });
+  $('camRot').addEventListener('click', () => { if (crop) setCropSource(rotate(crop.src)); });
+  $('camOk').addEventListener('click', () => {
+    if (!crop) return;
+    const f = frameRect(), c = crop;
+    finishCrop(c.src, (f.x - c.left) / c.s, (f.y - c.top) / c.s, f.w / c.s, f.h / c.s);
+  });
+  $('camShot').addEventListener('click', shoot);
+  $('camCancel').addEventListener('click', closeCam);
+  $('camAlt').addEventListener('click', () => $('photo').click());
+  $('photoPick').addEventListener('click', openCam);
+  $('noId').addEventListener('change', () => { $('photoPick').classList.toggle('off', $('noId').checked); refresh(); });
+  $('photo').addEventListener('change', e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (f) openCrop(f);
+  });
+  window.addEventListener('resize', () => { if ($('cam').classList.contains('on')) { placeFrame(); layoutCrop(); } });
+
+  $('form').addEventListener('submit', e => {
+    e.preventDefault();
+    refresh();
+    if ($('send').disabled) return;
+    $('msg').className = 'msg';
+    $('send').disabled = true;
+    const payload = {
+      idNum: $('idNum').value,
+      idPhoto: { mime: images.idPhoto.mime, data: images.idPhoto.data },
+      noId: $('noId').checked,
+      photo: $('noId').checked ? null : { mime: images.photo.mime, data: images.photo.data }
+    };
+    // لما الضغط عالي جوجل بترفض بعض الطلبات، فبنعيد المحاولة لوحدنا كذا مرة بفواصل عشوائية
+    const MAX_TRIES = 6;
+    const attempt = n => {
+      $('send').textContent = n === 1 ? 'جاري الإرسال…' : 'الضغط عالي، بنحاول تاني… (' + n + ')';
+      call('submitEmployee', payload)
+        .then(() => { $('form').style.display = 'none'; $('done').style.display = 'block'; })
+        .catch(err => {
+          const m = String(err && err.message || err || '');
+          const isUser = m.indexOf('⛔') >= 0;
+          if (!isUser && n < MAX_TRIES) return setTimeout(() => attempt(n + 1), (2 + n * 2 + Math.random() * 4) * 1000);
+          showErr(isUser ? m.replace(/^.*⛔\s*/, '') : 'الضغط عالي دلوقتي. استنى دقيقة واضغط إرسال تاني.');
+          $('send').textContent = 'إرسال'; refresh();
+        });
+    };
+    attempt(1);
+  });
+
+  call('getFormState')
+    .then(st => {
+      if (st.url) { $('adminBtn').href = st.url + '?page=admin'; $('adminBtn').style.display = 'inline-block'; }
+      $('loading').style.display = 'none';
+      if (!st.ready) { $('loading').style.display = 'block'; $('loading').textContent = 'الرابط لسه مش متجهز. كلّم المسؤول.'; return; }
+      if (!st.open) { $('loading').style.display = 'block'; $('loading').textContent = 'التسجيل مقفول حاليًا.'; return; }
+      $('form').style.display = 'block';
+    })
+    .catch(() => { $('loading').textContent = 'تعذّر التحميل، حدّث الصفحة.'; });
+</script>
+</body>
+</html>
